@@ -7,6 +7,7 @@ from fastmcp import FastMCP
 from fastmcp.tools import ToolResult
 import logging
 import re
+import json
 
 logging.basicConfig(
     level=logging.INFO,
