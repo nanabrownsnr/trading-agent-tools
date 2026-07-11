@@ -71,7 +71,7 @@ def execute_query(query: str, params: dict):
                 data = cur.execute(safe_query,params).fetchall()
             
 
-        return ["data": data]
+        return {"data": data}
                                 
     except psycopg.Error as e:
         logging.error(f"Database query execution failed: {e}")
