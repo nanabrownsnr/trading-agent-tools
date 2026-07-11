@@ -1,10 +1,7 @@
 import os
 from dotenv import load_dotenv
 import psycopg
-from prefab_ui.components import DataTable, DataTableColumn, Column, Heading
-from prefab_ui.app import PrefabApp
 from fastmcp import FastMCP
-from fastmcp.tools import ToolResult
 import logging
 import re
 import json

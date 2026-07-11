@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 import logging
 from pydantic import BaseModel
 import importlib
