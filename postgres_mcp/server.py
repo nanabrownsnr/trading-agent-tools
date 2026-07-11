@@ -81,7 +81,7 @@ def get_price(commodity: str, exchange: str, start_date: str, end_date: str):
         return {"error": f"Query failed: {e}"}
 
 @mcp.tool(app=True)
-def execute_query(query: str, params: dict) -> ToolResult:
+def execute_query(query: str, params: dict):
 
     """
     Runs a read-only SQL query against the database.
@@ -109,7 +109,7 @@ def execute_query(query: str, params: dict) -> ToolResult:
                         )
 
                         if not data:
-                            Heading("No records found for the specified parameters.", level=4)
+                            Heading("No records found.", level=4)
                         else:
                             dynamic_columns = [
                                 DataTableColumn(
@@ -122,7 +122,14 @@ def execute_query(query: str, params: dict) -> ToolResult:
 
                             DataTable(columns=dynamic_columns, rows=data, search=True)
 
-                    return ToolResult(content=data, structured_content=view)
+                    compiled_app = PrefabApp(view=view)
+                    text_payload = json.dumps(
+                    {"status": "success", "count": len(data)}, default=str
+                )
+
+                    return ToolResult(
+                    content=text_payload, structured_content=compiled_app
+                )
                                     
         except psycopg.Error as e:
             logging.error(f"Database query execution failed: {e}")
