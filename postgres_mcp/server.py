@@ -1,7 +1,10 @@
 import os
 from dotenv import load_dotenv
 import psycopg
-from mcp.server.fastmcp import FastMCP
+from prefab_ui.components import DataTable, DataTableColumn, Column, Heading
+from prefab_ui.app import PrefabApp
+from fastmcp import FastMCP
+from fastmcp.tools import ToolResult
 import logging
 import re
 
@@ -15,8 +18,6 @@ load_dotenv()
 
 mcp = FastMCP(
     "postgres_mcp",
-    host="0.0.0.0",
-    port=8000
 )
 
 def get_connection():
@@ -79,8 +80,8 @@ def get_price(commodity: str, exchange: str, start_date: str, end_date: str):
         logging.error(f"Database query execution failed: {e}")
         return {"error": f"Query failed: {e}"}
 
-@mcp.tool()
-def execute_query(query: str, params: dict):
+@mcp.tool(app=True)
+def execute_query(query: str, params: dict) -> ToolResult:
 
     """
     Runs a read-only SQL query against the database.
@@ -101,7 +102,28 @@ def execute_query(query: str, params: dict):
                     data = cur.execute(safe_query,params).fetchall()
                     logging.info(f"Executing Query: {query} with parameters: {params}")
                     logging.info(f"Successfully retrieved {len(data)} records.")
-                    return {"data": data}
+
+                    with Column(gap=4, css_class="p-6") as view:
+                        Heading(
+                            f"Query Results", level=2
+                        )
+
+                        if not data:
+                            Heading("No records found for the specified parameters.", level=4)
+                        else:
+                            dynamic_columns = [
+                                DataTableColumn(
+                                    key=k,
+                                    header=k.replace("_", " ").title(),
+                                    sortable=True,
+                                )
+                                for k in data[0].keys()
+                            ]
+
+                            DataTable(columns=dynamic_columns, rows=data, search=True)
+
+                    return ToolResult(content=data, structured_content=view)
+                                    
         except psycopg.Error as e:
             logging.error(f"Database query execution failed: {e}")
             return {"error": f"Query failed: {e}"}
@@ -112,4 +134,4 @@ def execute_query(query: str, params: dict):
     
 
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http")
+    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
