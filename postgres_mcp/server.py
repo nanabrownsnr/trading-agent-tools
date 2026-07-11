@@ -35,7 +35,7 @@ def get_connection():
         return conn
     except psycopg.OperationalError as e:
         logging.error(f"Database connection failed: {e}")
-        return {"error": f"Database connection failed: {e}"}
+        raise
 
 def _enforce_select_only(query: str) -> str:
     """Raise if the query isn't a single, simple SELECT statement."""
@@ -52,6 +52,11 @@ def _apply_row_limit(query: str, max_rows: int = 1000) -> str:
         return query
     return f"{query} LIMIT {max_rows}"
 
+def _get_ui_resource_uri(tool_name: str) -> str | None:
+    tool = mcp._tool_manager.get_tool(tool_name) 
+    if tool and tool.meta:
+        return tool.meta.get("ui", {}).get("resourceUri")
+    return None
 
 @mcp.tool()
 def get_price(commodity: str, exchange: str, start_date: str, end_date: str):
@@ -124,12 +129,18 @@ def execute_query(query: str, params: dict):
                             DataTable(columns=dynamic_columns, rows=data, search=True)
 
                     compiled_app = PrefabApp(view=view)
-                    text_payload = json.dumps(
-                    {"status": "success", "count": len(data)}, default=str
-                )
+                    text_payload = (
+                        f"Query returned {len(data)} rows with columns: {', '.join(data[0].keys()) if data else 'none'}."
+)
+                    resource_uri = _get_ui_resource_uri("execute_query")
+                    ui_meta = {"ui": {"resourceUri": resource_uri}} if resource_uri else {}
+                    if resource_uri:
+                        ui_meta["ui/resourceUri"] = resource_uri
 
                     return ToolResult(
-                    content=text_payload, structured_content=compiled_app
+                    content=text_payload, 
+                    structured_content=compiled_app,
+                    meta=ui_meta,
                 )
                                     
         except psycopg.Error as e:
@@ -143,3 +154,4 @@ def execute_query(query: str, params: dict):
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    print(mcp.tools)
