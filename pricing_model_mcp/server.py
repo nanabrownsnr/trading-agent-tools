@@ -54,8 +54,8 @@ def run_price_model(model_name: str, version: str, inputs: dict) -> dict:
     module = MODEL_REGISTRY.get((model_name, version))
     if module is None:
         raise ValueError(
-            f"No model '{model_name}' version '{version}' found.
-            ")
+            f"No model '{model_name}' version '{version}' found."
+            )
 
     try:
         validated = module.Inputs(**inputs)
