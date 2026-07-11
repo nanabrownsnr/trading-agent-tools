@@ -7,9 +7,7 @@ import pkgutil
 from pathlib import Path
 
 mcp = FastMCP(
-    "pricing_model_mcp",
-    host ="0.0.0.0",
-    port=8001
+    "pricing_model_mcp"
 )
 
 MODEL_REGISTRY = {}
