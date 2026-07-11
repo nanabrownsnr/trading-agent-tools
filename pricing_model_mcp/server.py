@@ -35,12 +35,12 @@ def get_model_metadata(model_name: str, version: str) -> dict:
     module = MODEL_REGISTRY.get((model_name, version))
     if module is None:
         return {"error": f"No model '{model_name}' version '{version}' found."}
-    return {
+    return {"data": {
         "name": model_name,
         "version": version,
         "description": module.DESCRIPTION,
         "input_schema": module.Inputs.model_json_schema(),  # full JSON schema: fields, types, required, descriptions
-    }
+    } }
 
 
 @mcp.tool()
@@ -53,13 +53,23 @@ def run_price_model(model_name: str, version: str, inputs: dict) -> dict:
     """
     module = MODEL_REGISTRY.get((model_name, version))
     if module is None:
-        return {"error": f"No model '{model_name}' version '{version}' found."}
+        raise ValueError(
+            f"No model '{model_name}' version '{version}' found.
+            ")
+
     try:
         validated = module.Inputs(**inputs)
     except ValidationError as e:
-        return {"error": "Invalid inputs", "details": e.errors()}
+        raise ValueError(
+            f"Invalid inputs: {e.errors()}"
+            ) from e
+
     price = module.run(validated)
-    return {"price": price, "model": model_name, "version": version}
+    return {
+        "price": price,
+        "model": model_name,
+        "version": version,
+    }
 
 
 @mcp.tool()
@@ -76,7 +86,9 @@ def list_price_models() -> dict:
             "version": version,
             "description": module.DESCRIPTION,
         })
-    return {"models": models}
+    return {
+        "models": models
+    }
 
 
 if __name__ == "__main__":
