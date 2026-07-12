@@ -3,7 +3,8 @@ from fastmcp import FastMCP
 from fastmcp.apps import AppConfig, ResourceCSP
 from fastmcp.tools import ToolResult
 from charts import build_line_chart
-
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 
 mcp = FastMCP("graph-mcp")
 
@@ -42,6 +43,28 @@ def generate_line_chart(data: list[dict], x_field: str, y_field: str,
     )
 
 
+
+
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=["*"], 
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "mcp-protocol-version",
+            "mcp-session-id",
+            "Authorization",
+            "Content-Type",
+        ],
+        expose_headers=["mcp-session-id"],
+    )
+]
+app = mcp.http_app(
+    middleware=middleware
+    )
+
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8002)
+    import uvicorn
+
+    uvicorn.run(transport="streamable-http", host="0.0.0.0", port=8002)
 
