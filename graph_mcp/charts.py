@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -18,7 +19,7 @@ def build_line_chart(data: list[dict], x_field: str, y_field: str,
         raise ValueError(f"Missing expected field(S) in data: {missing} ")
 
     fig = px.line(df, x=x_field, y=y_field, color=series_field, title=title)
-    return fig.to_dict()
+    return json.loads(fig.to_json())
 
 
 def build_candlestick_chart(data: list[dict], x_field: str,

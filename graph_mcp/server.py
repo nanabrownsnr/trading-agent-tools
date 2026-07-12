@@ -34,12 +34,12 @@ def generate_line_chart(data: list[dict], x_field: str, y_field: str,
         return ToolResult(content =str(e))
 
     values = [row[y_field] for row in data if y_field in row]
-    summary = (
-        f"Rendered a line chart of {y_field} vs {x_field} "
-        f"({len(data)} points, {min(values):.2f} to {max(values):.2f})"
-        if values else f"No data to plot for '{y_field}'."
+
+    return ToolResult(
+        content=values, 
+        structured_content={"figure": figure},
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
     )
-    return ToolResult(content=summary, structured_content={"figure": figure})
 
 
 if __name__ == "__main__":
