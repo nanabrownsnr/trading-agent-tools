@@ -9,13 +9,13 @@ from starlette.middleware.cors import CORSMiddleware
 mcp = FastMCP("graph-mcp")
 
 VIEW_URI = "ui://graph_mcp/line-chart.html"
-VIEW_HTML = (Path(__file__).parent / "views" / "line_chart.html").read_text()
+VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
 
 
 @mcp.resource(
     VIEW_URI,
     app=AppConfig(csp=ResourceCSP(
-        resource_domains=["https://unpkg.com", "https://cdn.plot.ly"],
+        resource_domains=["https://cdn.plot.ly"],
     ))
 )
 
