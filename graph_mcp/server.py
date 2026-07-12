@@ -57,7 +57,7 @@ def generate_line_chart(data: list[dict], x_field: str, y_field: str,
 
 
 VIEW_URI_CANDLESTICK = "ui://graph_mcp/candlestick-chart.html"
-VIEW_HTML_CANDLESTICK = (Path(__file__).parent / "views" / "candlestick-dist" / "index.html").read_text()
+VIEW_HTML_CANDLESTICK = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
 
 @mcp.resource(
     VIEW_URI_CANDLESTICK,
