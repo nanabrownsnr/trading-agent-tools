@@ -36,8 +36,10 @@ def generate_line_chart(data: list[dict], x_field: str, y_field: str,
 
     values = [row[y_field] for row in data if y_field in row]
 
+    content = f"Chart with these values {values} has been generated and rendered."
+
     return ToolResult(
-        content=values, 
+        content=content, 
         structured_content={"figure": figure},
         meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
     )
