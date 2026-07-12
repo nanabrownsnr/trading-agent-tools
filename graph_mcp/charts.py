@@ -43,8 +43,7 @@ def build_candlestick_chart(data: list[dict], x_field: str,
         close=df[close_field],
     )])
     fig.update_layout(title=title, xaxis_rangeslider_visible=True)
-    return fig.to_html(include_plotlyjs="cdn", full_html=False)
-
+    return json.loads(fig.to_json())
 
 def build_dual_axis_chart(data: list[dict], x_field: str,
                            y1_field: str, y2_field: str,
