@@ -1,0 +1,11 @@
+<div id="chart" style="width:100%;height:420px;"></div>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script type="module">
+    import { App } from "https://unpkg.com/@modelcontextprotocol/ext-apps/dist/index.js";
+    const app = new App({ name: "graph-mcp-line-chart", version: "1.0.0" });
+    app.ontoolresult = (result) => {
+        const figure = result.structuredContent?.figure;
+        if (figure) Plotly.newPlot("chart", figure.data, figure.layout, { responsive: true });
+    };
+    app.connect();
+</script>
