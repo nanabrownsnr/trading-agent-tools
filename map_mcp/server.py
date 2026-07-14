@@ -3,7 +3,8 @@ from fastmcp.apps import AppConfig, ResourceCSP
 from fastmcp.tools import ToolResult
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from layers.points import PointsLayer, ChoroplethLayer
+from layers.points import PointsLayer
+from layers.choropleth import ChoroplethLayer
 from pydantic import BaseModel
 from pathlib import Path
 
