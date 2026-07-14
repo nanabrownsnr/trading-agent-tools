@@ -92,6 +92,10 @@ app.ontoolresult = (result) => {
     }
 
     (data.layers || []).forEach((layer) => {
+        console.log("Layer:", layer);
+        console.log("Layer type:", layer.type);
+        console.log("Keys:", Object.keys(layer));
+
         const renderer = LAYER_RENDERERS[layer.type];
         if (renderer) {
             renderer(layer);
