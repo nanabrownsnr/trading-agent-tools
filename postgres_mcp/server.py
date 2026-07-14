@@ -106,7 +106,7 @@ def get_database_summary():
                     FROM pg_class c
                     JOIN pg_namespace n ON n.oid = c.relnamespace
                     WHERE c.relkind = 'r' 
-                    AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    AND n.nspname = 'public'
                     ORDER BY pg_total_relation_size(c.oid) DESC;
                 """
                 cur.execute(table_query)
