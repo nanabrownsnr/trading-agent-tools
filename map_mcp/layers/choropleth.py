@@ -33,7 +33,8 @@ class ChoroplethLayer:
                                         [-2.80, 6.85]
                                     ]
                                 ]
-                            },
+                            }
+                        },
                         {
                             "type": "Feature",
                             "properties": {
