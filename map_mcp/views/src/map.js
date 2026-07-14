@@ -45,12 +45,13 @@ function renderChoropleth(layer) {
     const values = layer.geojson.features
         .map((f) => f.properties?.[layer.value_field])
         .filter((v) => v != null && !Number.isNaN(v));
+
     const min = Math.min(...values);
     const max = Math.max(...values);
 
     const geoLayer = L.geoJSON(layer.geojson, {
         style: (feature) => ({
-            fillColor: colorForValue(feature.properties?.[layer.value_field], min, max),
+            fillColor: feature.properties?.colour || colorForValue(feature.properties?.[layer.value_field], min, max),
             fillOpacity: 0.75,
             weight: 1,
             color: "#333333",

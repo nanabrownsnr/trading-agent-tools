@@ -19,7 +19,8 @@ class ChoroplethLayer:
                             "type": "Feature",
                             "properties": {
                                 "name": "Ashanti",
-                                "population": 5600000
+                                "population": 5600000,
+                                "colour": "#331A1A"
                             },
                             "geometry": {
                                 "type": "Polygon",
@@ -39,7 +40,8 @@ class ChoroplethLayer:
                             "type": "Feature",
                             "properties": {
                                 "name": "Greater Accra",
-                                "population": 5300000
+                                "population": 5300000,
+                                "colour": "#331A1A"
                             },
                             "geometry": {
                                 "type": "MultiPolygon",
