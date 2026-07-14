@@ -7,11 +7,12 @@ from layers.points import PointsLayer
 from layers.choropleth import ChoroplethLayer
 from pydantic import BaseModel
 from pathlib import Path
+from typing import Any
 
 
 class layer(BaseModel):
     name: str
-    data: list[dict]
+     data: dict | list[dict]
 
 
 class MapRequest(BaseModel):
