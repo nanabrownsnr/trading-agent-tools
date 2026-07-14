@@ -129,7 +129,7 @@ def get_database_summary():
                     LEFT JOIN information_schema.table_constraints tc 
                         ON kcu.table_name = tc.table_name 
                         AND kcu.constraint_name = tc.constraint_name
-                    WHERE c.table_schema NOT IN ('pg_catalog', 'information_schema')
+                    WHERE c.table_schema = 'public'
                     ORDER BY c.table_name, c.ordinal_position;
                 """
                 cur.execute(column_query)
@@ -148,7 +148,7 @@ def get_database_summary():
                 
                 for col in columns_data:
                     t_name = col["table_name"]
-                    # Safeguard in case columns exist for tables missed in the physical filter
+
                     if t_name in summary["tables"]:
                         summary["tables"][t_name]["columns"][col["column_name"]] = {
                             "data_type": col["data_type"],
