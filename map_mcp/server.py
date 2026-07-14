@@ -12,7 +12,7 @@ from typing import Any
 
 class layer(BaseModel):
     name: str
-     data: dict | list[dict]
+    data: dict | list[dict]
 
 
 class MapRequest(BaseModel):
@@ -33,7 +33,7 @@ LAYERS = {
 mcp = FastMCP("map_mcp")
 
 VIEW_URI = "ui://maps_mcp/map.html"
-VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
+VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text(encoding="utf-8")
 
 
 @mcp.resource(
