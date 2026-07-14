@@ -41,9 +41,35 @@ function renderPoints(layer) {
     return group;
 }
 
+function renderChoropleth(layer) {
+    const values = layer.geojson.features
+        .map((f) => f.properties?.[layer.value_field])
+        .filter((v) => v != null && !Number.isNaN(v));
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    const geoLayer = L.geoJSON(layer.geojson, {
+        style: (feature) => ({
+            fillColor: colorForValue(feature.properties?.[layer.value_field], min, max),
+            fillOpacity: 0.75,
+            weight: 1,
+            color: "#333333",
+        }),
+        onEachFeature: (feature, lyr) => {
+            const name = feature.properties?.name || feature.properties?.region || "Region";
+            const value = feature.properties?.[layer.value_field];
+            lyr.bindPopup(`<strong>${name}</strong><br>${layer.value_field}: ${value ?? "n/a"}`);
+        },
+    }).addTo(map);
+
+    activeLayers.push(geoLayer);
+    return geoLayer;
+}
+
 
 const LAYER_RENDERERS = {
-    points: renderPoints
+    points: renderPoints,
+    choropleth: renderChoropleth,
 };
 
 app.ontoolresult = (result) => {
@@ -53,10 +79,8 @@ app.ontoolresult = (result) => {
     clearLayers();
 
     if (data.center) {
-        // Explicit center/zoom always wins, if the caller wants a fixed view.
         map.setView(data.center, data.zoom ?? map.getZoom());
     } else if (activeLayers.length > 0) {
-        // Otherwise, auto-fit to whatever was actually rendered.
         try {
             const group = L.featureGroup(activeLayers.filter((l) => typeof l.getBounds === "function"));
             if (group.getLayers().length > 0) {
