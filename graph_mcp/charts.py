@@ -3,6 +3,10 @@ import json
 import plotly.express as px
 import plotly.graph_objects as go
 
+def _require_fields(df: pd.DataFrame, fields: set[str]) -> None:
+    missing = fields - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing expected field(s) in data: {missing}")
 
 def build_line_chart(data: list[dict], x_field: str, y_field: str,
                       series_field: str | None = None, title: str = ""):
@@ -20,7 +24,6 @@ def build_line_chart(data: list[dict], x_field: str, y_field: str,
 
     fig = px.line(df, x=x_field, y=y_field, color=series_field, title=title)
     return json.loads(fig.to_json())
-
 
 def build_candlestick_chart(data: list[dict], x_field: str,
                              open_field: str, high_field: str,
@@ -71,10 +74,5 @@ def build_dual_axis_chart(data: list[dict], x_field: str,
         yaxis=dict(title=y1_label or y1_field),
         yaxis2=dict(title=y2_label or y2_field, overlaying="y", side="right"),
     )
-    return fig.to_html(include_plotlyjs="cdn", full_html=False)
+    return json.loads(fig.to_json())
 
-
-def _require_fields(df: pd.DataFrame, fields: set[str]) -> None:
-    missing = fields - set(df.columns)
-    if missing:
-        raise ValueError(f"Missing expected field(s) in data: {missing}")

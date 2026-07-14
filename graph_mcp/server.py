@@ -2,26 +2,25 @@ from pathlib import Path
 from fastmcp import FastMCP
 from fastmcp.apps import AppConfig, ResourceCSP
 from fastmcp.tools import ToolResult
-from charts import build_line_chart, build_candlestick_chart
+from charts import build_line_chart, build_candlestick_chart, build_dual_axis_chart
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 
 mcp = FastMCP("graph-mcp")
 
-VIEW_URI_LINE = "ui://graph_mcp/line-chart.html"
-VIEW_HTML_LINE = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
+VIEW_URI = "ui://graph_mcp/chart.html"
+VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
 
 @mcp.resource(
-    VIEW_URI_LINE,
+    VIEW_URI,
     app=AppConfig(csp=ResourceCSP(
         resource_domains=["https://cdn.plot.ly"],
     ))
 )
 def line_chart_view() -> str:
-    return VIEW_HTML_LINE
+    return VIEW_HTML
 
-
-@mcp.tool(app=AppConfig(resource_uri=VIEW_URI_LINE))
+@mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def generate_line_chart(data: list[dict], x_field: str, y_field: str,
                          series_field: str | None = None, title: str = "") -> ToolResult:
     """
@@ -51,21 +50,9 @@ def generate_line_chart(data: list[dict], x_field: str, y_field: str,
 
     return ToolResult(
         content=content, 
-        structured_content={"figure": figure},
-        meta={"ui": {"resourceUri": VIEW_URI_LINE}, "ui/resourceUri": VIEW_URI_LINE}
+        structured_content=figure,
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
     )
-
-
-VIEW_URI_CANDLESTICK = "ui://graph_mcp/candlestick-chart.html"
-VIEW_HTML_CANDLESTICK = (Path(__file__).parent / "views" / "dist" / "index.html").read_text()
-
-@mcp.resource(
-    VIEW_URI_CANDLESTICK,
-    app=AppConfig(csp=ResourceCSP(resource_domains=["https://cdn.plot.ly"]))
-)
-def candlestick_view() -> str:
-    return VIEW_HTML_CANDLESTICK
-
 
 def _to_float(row, field):
     try:
@@ -73,13 +60,11 @@ def _to_float(row, field):
     except (KeyError, TypeError, ValueError):
         return None
 
-
-
-@mcp.tool(app=AppConfig(resource_uri=VIEW_URI_CANDLESTICK))
+@mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def generate_candlestick_chart(data: list[dict], x_field: str,
                              open_field: str, high_field: str,
                              low_field: str, close_field: str,
-                             title: str = ""):
+                             title: str = "") -> ToolResult:
     """
     Render an interactive candlestick chart (zoom, pan, hover).
     data: rows from any mcp tool
@@ -108,13 +93,50 @@ def generate_candlestick_chart(data: list[dict], x_field: str,
     
     return ToolResult(
         content=content,
-        structured_content={"figure": figure},
-        meta={"ui": {"resourceUri": VIEW_URI_CANDLESTICK}, "ui/resourceUri": VIEW_URI_CANDLESTICK},
+        structured_content=figure,
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI},
     )
 
+@mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
+def generate_dual_axis_chart(data: list[dict], x_field: str,
+                           y1_field: str, y2_field: str,
+                           y1_label: str | None = None, y2_label: str | None = None,
+                           title: str = "") -> ToolResult:
+    """
+    Render an interactive dualaxis chart (zoom, pan, hover).
+    data: rows from any mcp tool
+    """
+    
+    try:
+        figure = build_dual_axis_chart(data, x_field, y1_field, y2_field, y1_label, y2_label, title)
+    except ValueError as e:
+        return ToolResult(content =str(e))
 
+    y1_values = [v for v in (_to_float(row, y1_field) for row in data) if v is not None]
+    y2_values = [v for v in (_to_float(row, y2_field) for row in data) if v is not None]
 
+    if y1_values and y2_values:
+        y1_range = f"{min(y1_values):.2f} to {max(y1_values):.2f}"
+        y2_range = f"{min(y2_values):.2f} to {max(y2_values):.2f}"
 
+        y1_direction = "up" if y1_values[-1] > y1_values[0] else "down" if y1_values[-1] < y1_values[0] else "flat"
+        y2_direction = "up" if y2_values[-1] > y2_values[0] else "down" if y2_values[-1] < y2_values[0] else "flat"
+        relationship = "moved together" if y1_direction == y2_direction else "diverged"
+
+        label1 = y1_label or y1_field
+        label2 = y2_label or y2_field
+        content = (
+            f"Rendered a dual-axis chart of {label1} ({y1_range}, {y1_direction}) "
+            f"vs {label2} ({y2_range}, {y2_direction}) over {len(data)} points — the two series {relationship}."
+        )
+    else:
+        content = f"Rendered a dual-axis chart of {y1_field} vs {y2_field} ({len(data)} points)."
+    
+    return ToolResult(
+        content=content,
+        structured_content=figure,
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI},
+    )
 
 middleware = [
     Middleware(
