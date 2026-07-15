@@ -73,6 +73,9 @@ def _summarize(processed_layers: list[dict]) -> str:
 
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def render_map(request: MapRequest) -> ToolResult:
+    """
+    Renders the map based on the required layer data, ensure you follow the example of the layer you are rendering and dont miss any required parameters.
+    """
     processed_layers = []
      
     try:
