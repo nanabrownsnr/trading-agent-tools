@@ -157,6 +157,8 @@ def _downsample_polygon(feature: dict[str, Any], min_points: int = 4, max_points
     def sample_ring(ring: list[list[float]], n: int) -> list[list[float]]:
         """Sample at most n points from a ring, keeping first and last."""
         # If ring is already short, just return it
+        n = max(min_points, n)
+        
         if len(ring) <= n:
             return ring
 
@@ -186,7 +188,7 @@ def _downsample_polygon(feature: dict[str, Any], min_points: int = 4, max_points
         for i, ring in enumerate(coords):
             # Only downsample outer ring (i == 0); keep holes as-is
             if i == 0:
-                new_rings.append(sample_ring(ring, target_points))
+                new_rings.append(sample_ring(ring, max_points))
             else:
                 new_rings.append(ring)
         new_geom = {"type": "Polygon", "coordinates": new_rings}
@@ -198,7 +200,7 @@ def _downsample_polygon(feature: dict[str, Any], min_points: int = 4, max_points
             new_rings = []
             for i, ring in enumerate(poly):
                 if i == 0:
-                    new_rings.append(sample_ring(ring, target_points))
+                    new_rings.append(sample_ring(ring, max_points))
                 else:
                     new_rings.append(ring)
             new_polys.append(new_rings)
