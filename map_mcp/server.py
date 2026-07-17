@@ -39,16 +39,6 @@ class Choropleth(BaseModel):
     feature: list[Feature]
     value_field: str
 
-# class CompositeLayer(BaseModel):
-#     type: str
-#     data: dict
-
-# class CompositeMap(BaseModel):
-#     layers: list[CompositeLayer]
-#     center: list[float]
-#     zoom: int
-
-
 mcp = FastMCP("map_mcp")
 
 VIEW_URI = "ui://maps_mcp/map.html"
@@ -151,7 +141,7 @@ def _get_geoboundaries_geojson(iso: str, adm: str = "ADM0", name_filter: Optiona
 
     return True, geojson
 
-def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[str, Any]:
+def _downsample_polygon(feature: dict[str, Any], min_points: int = 4, max_points: int = 7) -> dict[str, Any]:
     """
     Take a GeoJSON Feature with Polygon or MultiPolygon geometry
     and return a new Feature with a heavily downsampled polygon
@@ -159,12 +149,16 @@ def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[st
 
     This is a simple sampling approach, not a true geometric simplification.
     """
+    if max_points < min_points:
+        max_points = min_points
+
     geom = feature.get("geometry", {})
     gtype = geom.get("type")
     coords = geom.get("coordinates", [])
 
     def sample_ring(ring: list[list[float]], n: int) -> list[list[float]]:
         """Sample at most n points from a ring, keeping first and last."""
+        # If ring is already short, just return it
         if len(ring) <= n:
             return ring
 
@@ -172,11 +166,15 @@ def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[st
         closed = (ring[0] == ring[-1])
         core = ring[:-1] if closed else ring
 
-        step = max(1, len(core) // (n - 1))  # -1 because we'll add last separately
+        # We want total points including last to be <= n
+        # So we sample at most (n - 1) from core, then add last.
+        target_core_points = max(1, n - 1)
+
+        step = max(1, len(core) // target_core_points)
         sampled = core[0:len(core):step]
 
         # Guarantee we have at most n-1 core points
-        sampled = sampled[: n - 1]
+        sampled = sampled[:target_core_points]
 
         # Add last point (close ring)
         last = ring[-1] if closed else core[-1]
@@ -188,9 +186,9 @@ def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[st
         # coords: [ [ [lon, lat], ... ] ]
         new_rings = []
         for i, ring in enumerate(coords):
-            # Only downsample outer ring (i == 0); keep holes as-is or also downsample if you want
+            # Only downsample outer ring (i == 0); keep holes as-is
             if i == 0:
-                new_rings.append(sample_ring(ring, max_points))
+                new_rings.append(sample_ring(ring, target_points))
             else:
                 new_rings.append(ring)
         new_geom = {"type": "Polygon", "coordinates": new_rings}
@@ -202,14 +200,13 @@ def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[st
             new_rings = []
             for i, ring in enumerate(poly):
                 if i == 0:
-                    new_rings.append(sample_ring(ring, max_points))
+                    new_rings.append(sample_ring(ring, target_points))
                 else:
                     new_rings.append(ring)
             new_polys.append(new_rings)
         new_geom = {"type": "MultiPolygon", "coordinates": new_polys}
 
     else:
-        # Not a polygon geometry; return as-is
         return feature
 
     return {
