@@ -3,8 +3,6 @@ from fastmcp.apps import AppConfig, ResourceCSP
 from fastmcp.tools import ToolResult
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
-from layers.points import PointsLayer
-from layers.choropleth import ChoroplethLayer
 from pydantic import BaseModel
 from pathlib import Path
 from typing import Any, Optional
@@ -218,6 +216,30 @@ def _downsample_polygon(feature: dict[str, Any], min_points: int = 4, max_points
 
 @mcp.tool()
 def get_location_coordinates(location: str):
+    
+    """
+    Look up the approximate coordinates for a named location.
+
+    Use this when:
+    - You need a single point (latitude/longitude) for a place.
+    - You want to center a map or place a marker for a city, region, or country.
+    - You are not concerned with exact administrative boundaries, only a representative point.
+
+    Args:
+        location: A free-text place name, e.g. "Accra", "Ghana", "Los Angeles, USA".
+
+    Returns:
+        A dict with:
+            {
+                "lat": float,        # latitude
+                "lon": float,        # longitude
+                "name": str | None,  # resolved name
+                "country": str | None,
+                "countrycode": str | None
+            }
+        or None if the location cannot be resolved.
+    """
+    
     coordinates = None
     feature = _photon_geocode(location)
 
@@ -269,21 +291,42 @@ def get_location_coordinates(location: str):
 @mcp.tool()
 def get_location_polygon_geojson(location: str):
     """
-    Given a free-text location (e.g. 'Ghana', 'Ashanti Region', 'Los Angeles'),
-    query Nominatim and return the best match as a GeoJSON Feature
-    with polygon/multipolygon geometry when available.
+    Look up a simplified polygon or multipolygon boundary for a named location.
+
+    Use this when:
+    - You need the approximate shape of a country, region, or city.
+    - You want to draw a boundary on the map (e.g. for a choropleth).
+    - You need more than just a point; you need an area outline.
+
+    This tool queries Nominatim with polygon_geojson=1 and then heavily
+    downsamples the outer ring so the geometry is small enough for use
+    in prompts and lightweight visualizations.
+
+    Args:
+        location: A free-text place name, e.g. "Ghana",
+                  "Ashanti Region, Ghana", "Los Angeles, California".
 
     Returns:
-        (success, feature_geojson or None)
-
-        feature_geojson example:
-        {
-            "type": "Feature",
-            "geometry": { ... polygon or multipolygon ... },
-            "properties": { ... Nominatim fields ... }
-        }
+        A tuple (success, feature) where:
+            success: bool - True if a polygon was found.
+            feature: dict | None - A GeoJSON Feature:
+                {
+                    "type": "Feature",
+                    "geometry": { "type": "Polygon" | "MultiPolygon", "coordinates": [...] },
+                    "properties": {
+                        "display_name": str,
+                        "osm_id": int,
+                        "osm_type": str,
+                        "class": str | None,
+                        "type": str | None,
+                        "importance": float | None,
+                        "boundingbox": [str, str, str, str] | None,
+                        "address": dict | None
+                    }
+                }
+        If no polygon is available, returns (False, None).
     """
-    # Nominatim search endpoint with polygon_geojson=1 to get boundaries
+
     base_url = "https://nominatim.openstreetmap.org/search"
     params = {
         "q": location,
@@ -342,13 +385,51 @@ def get_location_polygon_geojson(location: str):
 
     return True, simplified_feature
 
-
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: int) -> ToolResult:
     """
-    Renders one or more choropleth layers on one map.
-    """
+    Render a choropleth map layer from polygon features with numeric values.
 
+    Use this when:
+    - You have one or more polygon Features (e.g. regions, countries, districts)
+      and a numeric field you want to visualize as a color scale.
+    - You want to show regional differences (e.g. production, risk, demand)
+      across areas on the map.
+
+    Args:
+        feature:
+            A list of Feature objects, each representing a polygon or multipolygon.
+            Each Feature.properties should include at least:
+                - name: str
+                - value_label: str        # human-readable label for the value
+                - value_quantity: float   # numeric value to visualize
+                - colour: str             # explicit color hex
+        value_field:
+            The name of the numeric property to use for coloring, typically "value_quantity".
+        center:
+            [lat, lon] to center the map view.
+        zoom:
+            Initial zoom level for the map.
+
+    Behavior:
+        - Wraps the features into a GeoJSON FeatureCollection.
+        - Sends a single "choropleth" layer to the map UI with:
+            {
+              "type": "choropleth",
+              "geojson": { "type": "FeatureCollection", "features": [...] },
+              "value_field": value_field
+            }
+
+    Returns:
+        ToolResult with:
+            - content: a brief text summary of what was rendered.
+            - structured_content: {
+                  "center": [lat, lon],
+                  "zoom": zoom,
+                  "layers": [ { type: "choropleth", ... } ]
+              }
+            - meta: UI resource URI for the map.
+    """
     processed_layers = []
     for l in layers:
         feature_dicts = [f.model_dump() for f in l.feature]
@@ -380,8 +461,45 @@ def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: 
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def render_points_map(layers: list[Points], center: list[float] , zoom: int) -> ToolResult:
     """
-    Renders one or more points on a single map.
+    Render a map with one or more point markers.
 
+    Use this when:
+    - You want to show specific locations as markers (cities, ports, facilities, etc.).
+    - You have a list of coordinates with labels and optional values.
+    - You want a simple point-based visualization (no polygons).
+
+    Args:
+        points:
+            A list of Point objects, each with:
+                - latitude: float
+                - longitude: float
+                - label: str
+                - value: str | None   # optional extra info shown in the popup
+        center:
+            [lat, lon] to center the map view.
+        zoom:
+            Initial zoom level for the map.
+
+    Behavior:
+        - Converts the list of Point objects into a single "points" layer:
+            {
+              "type": "points",
+              "points": [
+                { "latitude": ..., "longitude": ..., "label": "...", "value": "..." },
+                ...
+              ]
+            }
+        - Sends this layer to the map UI for rendering.
+
+    Returns:
+        ToolResult with:
+            - content: a brief text summary of what was rendered.
+            - structured_content: {
+                  "center": [lat, lon],
+                  "zoom": zoom,
+                  "layers": [ { type: "points", points: [...] } ]
+              }
+            - meta: UI resource URI for the map.
     """
     processed_layers = []
     for l in layers:
@@ -406,6 +524,8 @@ def render_points_map(layers: list[Points], center: list[float] , zoom: int) -> 
         meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
     )
 
+#ToDo
+#def render_composite_map()
 
 middleware = [
     Middleware(
