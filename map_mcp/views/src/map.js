@@ -30,7 +30,7 @@ function clearLayers() {
 function renderPoints(layer) {
     const group = L.layerGroup();
     (layer.points || []).forEach((p) => {
-        const marker = L.marker([p.lat, p.lng]);
+        const marker = L.marker([p.latitude, p.longitude]);
         if (p.label || p.value != null) {
             marker.bindPopup(`${p.label || ""}${p.value != null ? `<br>value: ${p.value}` : ""}`);
         }

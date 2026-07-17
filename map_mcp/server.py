@@ -10,24 +10,42 @@ from pathlib import Path
 from typing import Any, Optional
 import requests
 
-class layer(BaseModel):
-    name: str
-    data: dict | list[dict]
+class Point(BaseModel):
+    latitude: float, 
+    longitude: float, 
+    label: str
+    value: str | None = None
 
 
-class MapRequest(BaseModel):
-    layers: list[layer]
+
+
+class feature_properties(BaseModel):
+    name: str,
+    value_label: str,
+    value_quantity: float,
+    colour: str
+
+class feature_geometry(BaseModel):
+    type: str,
+    coordinates: list[list]
+
+class Feature(BaseModel):
+    properties: feature_properties,
+    geometry: feature_geometry,s
+    type: str
+
+
     center: list[float] | None = None # only set this for a deliberate fixed view — otherwise the map auto-fits to rendered data
     zoom: int | None = None
 
-points_layer = PointsLayer()
-choropleth_layer = ChoroplethLayer()
+# points_layer = PointsLayer()
+# choropleth_layer = ChoroplethLayer()
 
 
-LAYERS = {
-    "points": points_layer,
-    "choropleth" : choropleth_layer
-}
+# LAYERS = {
+#     "points": points_layer,
+#     "choropleth" : choropleth_layer
+# }
 
 
 mcp = FastMCP("map_mcp")
@@ -326,19 +344,6 @@ def get_location_polygon_geojson(location: str):
 
     return True, simplified_feature
 
-@mcp.tool()
-def get_map_layers():
-    """
-    Returns all supported map layers and their schemas.
-    """
-
-    return {
-        "layers": [
-            layer.metadata
-            for layer in LAYERS.values()
-        ]
-    }
-
 
 def _summarize(processed_layers: list[dict]) -> str:
     """Build a compact text summary of what was rendered, for the model."""
@@ -352,30 +357,84 @@ def _summarize(processed_layers: list[dict]) -> str:
 
     return f"Rendered a map with: {'; '.join(parts)}."
 
+# def render_map(request: MapRequest) -> ToolResult:
+#     """
+#     Renders the map based on the required layer data, ensure you follow the example of the layer you are rendering and dont miss any required parameters.
+#     """
+#     processed_layers = []
+     
+#     try:
+#         processed_layers = []
+#         for layer in request.layers:
+#             processor = LAYERS.get(layer.name)
+#             if processor is None:
+#                 return ToolResult(content=f"Unknown layer type: {layer.name}")
+#             processed_layers.append(processor.process(layer.data))
+#     except ValueError as e:
+#         return ToolResult(content=str(e))
+    
+#     structured = {
+#         "center": request.center,
+#         "zoom": request.zoom,
+#         "layers": processed_layers,
+#     }
+
+#     content = _summarize(processed_layers)
+ 
+#     return ToolResult(
+#         content=content,
+#         structured_content=structured,
+#         meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
+#     )
+
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
-def render_map(request: MapRequest) -> ToolResult:
+def render_choropleth_map(feature: list[Feature], value_field: str, center: float , zoom: int) -> ToolResult:
     """
     Renders the map based on the required layer data, ensure you follow the example of the layer you are rendering and dont miss any required parameters.
     """
-    processed_layers = []
-     
-    try:
-        processed_layers = []
-        for layer in request.layers:
-            processor = LAYERS.get(layer.name)
-            if processor is None:
-                return ToolResult(content=f"Unknown layer type: {layer.name}")
-            processed_layers.append(processor.process(layer.data))
-    except ValueError as e:
-        return ToolResult(content=str(e))
+    geojson = {
+            "type": "FeatureCollection",
+            "feature": feature
+        }
+    layers ={
+            "type": "choropleth",
+            "geojson": geojson,
+            "value_field": value_field,
+        }
     
     structured = {
-        "center": request.center,
-        "zoom": request.zoom,
-        "layers": processed_layers,
+        "center": center,
+        "zoom": zoom,
+        "layers": layers,
     }
 
-    content = _summarize(processed_layers)
+    content = _summarize(layers)
+ 
+    return ToolResult(
+        content=content,
+        structured_content=structured,
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
+    )
+
+@mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
+def render_points_map(points: list[Point], center: float , zoom: int) -> ToolResult:
+    """
+    Renders a points based map based on the list of points inputed
+
+    """
+    layers = {
+        "type": "points", 
+        "points": points
+    }
+
+
+    structured = {
+        "center": center,
+        "zoom": zoom,
+        "layers": layers,
+    }
+
+    content = _summarize(layers)
  
     return ToolResult(
         content=content,
