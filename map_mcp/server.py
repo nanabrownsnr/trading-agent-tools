@@ -11,8 +11,8 @@ from typing import Any, Optional
 import requests
 
 class Point(BaseModel):
-    latitude: float, 
-    longitude: float, 
+    latitude: float
+    longitude: float
     label: str
     value: str | None = None
 
@@ -20,32 +20,20 @@ class Point(BaseModel):
 
 
 class feature_properties(BaseModel):
-    name: str,
-    value_label: str,
-    value_quantity: float,
+    name: str
+    value_label: str
+    value_quantity: float
     colour: str
 
 class feature_geometry(BaseModel):
-    type: str,
+    type: str
     coordinates: list[list]
 
 class Feature(BaseModel):
-    properties: feature_properties,
-    geometry: feature_geometry,s
+    properties: feature_properties
+    geometry: feature_geometry
     type: str
 
-
-    center: list[float] | None = None # only set this for a deliberate fixed view — otherwise the map auto-fits to rendered data
-    zoom: int | None = None
-
-# points_layer = PointsLayer()
-# choropleth_layer = ChoroplethLayer()
-
-
-# LAYERS = {
-#     "points": points_layer,
-#     "choropleth" : choropleth_layer
-# }
 
 
 mcp = FastMCP("map_mcp")
