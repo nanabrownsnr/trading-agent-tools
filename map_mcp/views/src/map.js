@@ -28,6 +28,7 @@ function clearLayers() {
 }
 
 function renderPoints(layer) {
+    console.log("renderPoints called with:", layer);
     const group = L.layerGroup();
     (layer.points || []).forEach((p) => {
         const marker = L.marker([p.latitude, p.longitude]);
@@ -93,7 +94,7 @@ app.ontoolresult = (result) => {
     }
 
     (data.layers || []).forEach((layer) => {
-
+        console.log("Rendering layer object:", layer);
         const renderer = LAYER_RENDERERS[layer.type];
         if (renderer) {
             renderer(layer);
