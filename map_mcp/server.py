@@ -133,7 +133,7 @@ def _get_geoboundaries_geojson(iso: str, adm: str = "ADM0", name_filter: Optiona
 
     if name_filter:
         name_filter_lower = name_filter.lower()
-        features: List[Dict[str, Any]] = geojson.get("features", [])
+        features: list[Dict[str, Any]] = geojson.get("features", [])
         filtered = [
             f for f in features
             if str(f.get("properties", {}).get("shapeName", "")).lower()
@@ -163,7 +163,7 @@ def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[st
     gtype = geom.get("type")
     coords = geom.get("coordinates", [])
 
-    def sample_ring(ring: List[List[float]], n: int) -> List[List[float]]:
+    def sample_ring(ring: list[list[float]], n: int) -> list[list[float]]:
         """Sample at most n points from a ring, keeping first and last."""
         if len(ring) <= n:
             return ring
@@ -345,49 +345,6 @@ def get_location_polygon_geojson(location: str):
 
     return True, simplified_feature
 
-
-# def _summarize(processed_layers: list[dict]) -> str:
-#     """Build a compact text summary of what was rendered, for the model."""
-#     parts = []
-#     for layer in processed_layers:
-#         if layer["type"] == "points":
-#             labels = [p["label"] for p in layer["points"] if p.get("label")]
-#             preview = ", ".join(labels[:5])
-#             more = f" and {len(labels) - 5} more" if len(labels) > 5 else ""
-#             parts.append(f"{len(layer['points'])} point(s) ({preview}{more})")
-
-#     return f"Rendered a map with: {'; '.join(parts)}."
-
-# def render_composite_map(request: CompositeMap) -> ToolResult:
-#     """
-#     Render a map with one or more layers (points and/or choropleth).    
-#     """
-    
-#     processed_layers = []
-     
-#     try:
-#         processed_layers = []
-#         for layer in request.layers:
-#             processor = LAYERS.get(layer.name)
-#             if processor is None:
-#                 return ToolResult(content=f"Unknown layer type: {layer.name}")
-#             processed_layers.append(processor.process(layer.data))
-#     except ValueError as e:
-#         return ToolResult(content=str(e))
-    
-#     structured = {
-#         "center": request.center,
-#         "zoom": request.zoom,
-#         "layers": processed_layers,
-#     }
-
-#     content = _summarize(processed_layers)
- 
-#     return ToolResult(
-#         content=content,
-#         structured_content=structured,
-#         meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
-#     )
 
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: int) -> ToolResult:
