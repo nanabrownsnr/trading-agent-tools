@@ -10,13 +10,14 @@ from pathlib import Path
 from typing import Any, Optional
 import requests
 
-class Point(BaseModel):
+class point_properties(BaseModel):
     latitude: float
     longitude: float
     label: str
     value: str | None = None
 
-
+class Points(BaseModel):
+    points: list[point_properties]
 
 
 class feature_properties(BaseModel):
@@ -34,6 +35,18 @@ class Feature(BaseModel):
     geometry: feature_geometry
     type: str
 
+class Choropleth(BaseModel):
+    feature: list[Feature]
+    value_field: str
+
+# class CompositeLayer(BaseModel):
+#     type: str
+#     data: dict
+
+# class CompositeMap(BaseModel):
+#     layers: list[CompositeLayer]
+#     center: list[float]
+#     zoom: int
 
 
 mcp = FastMCP("map_mcp")
@@ -345,10 +358,11 @@ def get_location_polygon_geojson(location: str):
 
 #     return f"Rendered a map with: {'; '.join(parts)}."
 
-# def render_map(request: MapRequest) -> ToolResult:
+# def render_composite_map(request: CompositeMap) -> ToolResult:
 #     """
-#     Renders the map based on the required layer data, ensure you follow the example of the layer you are rendering and dont miss any required parameters.
+#     Render a map with one or more layers (points and/or choropleth).    
 #     """
+    
 #     processed_layers = []
      
 #     try:
@@ -376,27 +390,32 @@ def get_location_polygon_geojson(location: str):
 #     )
 
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
-def render_choropleth_map(feature: list[Feature], value_field: str, center: float , zoom: int) -> ToolResult:
+def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: int) -> ToolResult:
     """
-    Renders the map based on the required layer data, ensure you follow the example of the layer you are rendering and dont miss any required parameters.
+    Renders one or more choropleth layers on one map.
     """
-    geojson = {
+
+    processed_layers = []
+    for l in layers:
+        feature_dicts = [f.model_dump() for f in l.feature]
+        geojson = {
             "type": "FeatureCollection",
-            "feature": feature
+            "features": feature_dicts,
         }
-    layers ={
+        processed_layers.append({
             "type": "choropleth",
             "geojson": geojson,
-            "value_field": value_field,
-        }
+            "value_field": l.value_field,
+        })
+
     
     structured = {
         "center": center,
         "zoom": zoom,
-        "layers": layers,
+        "layers": processed_layers,
     }
 
-    content = f"Rendered a choropleth map on the canvas with this data: {layers}."
+    content = f"Rendered {len(processed_layers)} choropleth layer(s) on the canvas."
  
     return ToolResult(
         content=content,
@@ -405,24 +424,27 @@ def render_choropleth_map(feature: list[Feature], value_field: str, center: floa
     )
 
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
-def render_points_map(points: list[Point], center: float , zoom: int) -> ToolResult:
+def render_points_map(layers: list[Points], center: list[float] , zoom: int) -> ToolResult:
     """
-    Renders a points based map based on the list of points inputed
+    Renders one or more points on a single map.
 
     """
-    layers = {
-        "type": "points", 
-        "points": points
-    }
+    processed_layers = []
+    for l in layers:
+        point_dicts = [p.model_dump() for p in l.points]
+        processed_layers.append({
+            "type": "points",
+            "points": point_dicts,
+        })
 
 
     structured = {
         "center": center,
         "zoom": zoom,
-        "layers": layers,
+        "layers": processed_layers ,
     }
 
-    content = f"Rendered a points map on the canvas with this data: {layers}."
+    content = f"Rendered {len(processed_layers)} points layer(s) on the canvas."
  
     return ToolResult(
         content=content,
