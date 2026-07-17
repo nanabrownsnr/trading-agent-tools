@@ -333,17 +333,17 @@ def get_location_polygon_geojson(location: str):
     return True, simplified_feature
 
 
-def _summarize(processed_layers: list[dict]) -> str:
-    """Build a compact text summary of what was rendered, for the model."""
-    parts = []
-    for layer in processed_layers:
-        if layer["type"] == "points":
-            labels = [p["label"] for p in layer["points"] if p.get("label")]
-            preview = ", ".join(labels[:5])
-            more = f" and {len(labels) - 5} more" if len(labels) > 5 else ""
-            parts.append(f"{len(layer['points'])} point(s) ({preview}{more})")
+# def _summarize(processed_layers: list[dict]) -> str:
+#     """Build a compact text summary of what was rendered, for the model."""
+#     parts = []
+#     for layer in processed_layers:
+#         if layer["type"] == "points":
+#             labels = [p["label"] for p in layer["points"] if p.get("label")]
+#             preview = ", ".join(labels[:5])
+#             more = f" and {len(labels) - 5} more" if len(labels) > 5 else ""
+#             parts.append(f"{len(layer['points'])} point(s) ({preview}{more})")
 
-    return f"Rendered a map with: {'; '.join(parts)}."
+#     return f"Rendered a map with: {'; '.join(parts)}."
 
 # def render_map(request: MapRequest) -> ToolResult:
 #     """
@@ -396,7 +396,7 @@ def render_choropleth_map(feature: list[Feature], value_field: str, center: floa
         "layers": layers,
     }
 
-    content = _summarize(layers)
+    content = f"Rendered a choropleth map on the canvas with this data: {layers}."
  
     return ToolResult(
         content=content,
@@ -422,7 +422,7 @@ def render_points_map(points: list[Point], center: float , zoom: int) -> ToolRes
         "layers": layers,
     }
 
-    content = _summarize(layers)
+    content = f"Rendered a points map on the canvas with this data: {layers}."
  
     return ToolResult(
         content=content,
