@@ -66,11 +66,7 @@ def _photon_geocode(location: str):
 
     return feature
 
-def _get_geoboundaries_geojson(
-                                iso: str,
-                                adm: str = "ADM0",
-                                name_filter: Optional[str] = None
-                            ): 
+def _get_geoboundaries_geojson(iso: str, adm: str = "ADM0", name_filter: Optional[str] = None): 
     iso = iso.upper()
     adm = adm.upper()
 
@@ -136,7 +132,7 @@ def _get_geoboundaries_geojson(
 
     return True, geojson
 
-def _downsample_polygon(feature: Dict[str, Any], max_points: int = 7) -> Dict[str, Any]:
+def _downsample_polygon(feature: dict[str, Any], max_points: int = 7) -> dict[str, Any]:
     """
     Take a GeoJSON Feature with Polygon or MultiPolygon geometry
     and return a new Feature with a heavily downsampled polygon
