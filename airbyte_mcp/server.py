@@ -1,8 +1,10 @@
-import os
+from dotenv import load_dotenv
 import requests
 from fastmcp import FastMCP
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
+
+load_dotenv()
 
 AIRBYTE_BASE_URL = os.getenv("AIRBYTE_BASE_URL", "https://api.airbyte.com/v1")
 AIRBYTE_API_KEY = os.getenv("AIRBYTE_API_KEY", "")
