@@ -106,8 +106,5 @@ middleware = [
 app = mcp.http_app(middleware=middleware)
 
 if __name__ == "__main__":
-
-    print(list_sources())
-
-    # import uvicorn
-    # uvicorn.run(app, host="0.0.0.0", port=8004)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8004)
