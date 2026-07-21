@@ -223,12 +223,12 @@ def _fetch_rainfall():
     query = "SELECT * FROM rainfall;"
     return execute_query(query, ())
 
-def _build_line_chart(data: list[dict], x_field: str, y_field: str, series_field: str | None = None, title: str = ""):
+def _build_line_chart(data: list[dict], x_field: str, y_field: str, series_field: str | None = None, title: str = "", y_axis_title: str | None = None):
     """
     Price/time series. Pass series_field (e.g. 'commodity') to overlay
     multiple series on one chart — e.g. Corn vs Wheat over the same range.
 
-    Expected data shape: [{"ts": "...", "price": ..., "commodity": "Corn"}, ...]
+    Expected data shape: [{"time": "...", "price": ..., "commodity": "Corn"}, ...]
     """
     df = pd.DataFrame(data)
     missing = {x_field, y_field} - set(df.columns)
@@ -237,6 +237,8 @@ def _build_line_chart(data: list[dict], x_field: str, y_field: str, series_field
         raise ValueError(f"Missing expected field(S) in data: {missing} ")
 
     fig = px.line(df, x=x_field, y=y_field, color=series_field, title=title)
+    if y_axis_title:
+        fig.update_layout(yaxis_title=y_axis_title)
     return json.loads(fig.to_json())
 
 def _compute_summary_stats(series: list[float]):
@@ -285,32 +287,40 @@ def show_dashboard(commodity: str):
     """
 
     price_data = _fetch_prices(commodity)
-    if not price_data:
-        return f"No Price Data for this {commodity}"
-
+    production_data = _fetch_production(commodity)
+    
+    if not price_data and not production_data:
+        return f"No Data for this {commodity}"
+        
     processed_price_data = [
         {**row, 'price': float(row['price'])} for row in price_data
     ]
+    processed_production_data = [
+        {**row, 'production_tonnes': float(row['production_tonnes'])} for row in production_data
+    ]
+
+    currency = price_rows[0].get("currency") if price_rows else None
+    unit = price_rows[0].get("unit") if price_rows else None
+
+
+    if currency and unit:
+        y_title = f"Price ({currency}/{unit})"
+    elif currency:
+        y_title = f"Price ({currency})"
+    else:
+        y_title = "Price"
     
     price_chart = _build_line_chart(
         data=processed_price_data,
-        x_field="ts",
+        x_field="time",
         y_field="price",
-        title=f"{commodity} Prices"
+        y_axis_title=y_title,
+        title=f"{commodity.title()} Prices"
     )
 
     price_series = [row["price"] for row in processed_price_data]
 
     metrics = _compute_summary_stats(price_series)
-
-
-    production_data = _fetch_production(commodity)
-    if not production_data:
-        return f"No Production Data for this {commodity}"
-
-    processed_production_data = [
-        {**row, 'production_tonnes': float(row['production_tonnes'])} for row in production_data
-    ]
 
     production_chart = _build_line_chart(
         data=processed_production_data,
@@ -326,7 +336,7 @@ def show_dashboard(commodity: str):
     }
 
     structured ={
-        "commodity":commodity,
+        "commodity":commodity.title(),
         "metrics": metrics,
         "charts": charts
     }
