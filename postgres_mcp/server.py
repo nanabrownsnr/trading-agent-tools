@@ -210,8 +210,8 @@ def get_database_summary():
 
 def _fetch_prices(commodity):
     """Fetch price data for the given commodity."""
-    query = "SELECT * FROM prices WHERE commodity = %s;"
-    return execute_query(query, (commodity,))
+    query = f"SELECT * FROM {commodity.lower()}_prices;"
+    return execute_query(query, ())
 
 def _fetch_production(commodity):
     """Fetch production data for the given commodity."""
@@ -336,7 +336,7 @@ def show_dashboard(commodity: str):
     charts = {
         "price_chart": price_chart,
     }
-    
+
     if production_data:
         charts["production_chart"] = production_chart
 
@@ -373,16 +373,5 @@ app = mcp.http_app(
     )
 
 if __name__ == "__main__":
-    # print("price data:")
-    # price_data= _fetch_prices("cocoa")
-    # processed_price_data = [
-    #     {**row, 'price': float(row['price'])} for row in price_data
-    # ]
-    
-    # price_series = [row["price"] for row in processed_price_data]
-
-    # metrics = _compute_summary_stats(price_series)
-
-    # print(metrics)
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
