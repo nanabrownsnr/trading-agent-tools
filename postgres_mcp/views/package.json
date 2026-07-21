@@ -1,0 +1,16 @@
+{
+    "name": "map_view",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "vite build"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/ext-apps": "^1.7.0",
+        "leaflet": "^1.9.4"
+    },
+    "devDependencies": {
+        "vite": "^7.1.7",
+        "vite-plugin-singlefile": "^2.3.0"
+    }
+}

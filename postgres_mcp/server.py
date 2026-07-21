@@ -2,9 +2,20 @@ import os
 from dotenv import load_dotenv
 import psycopg
 from fastmcp import FastMCP
+from fastmcp.apps import AppConfig, ResourceCSP
+from fastmcp.tools import ToolResult
 import logging
 import re
 import json
+from datetime import datetime
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
+from pathlib import Path
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import statistics
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,6 +28,16 @@ load_dotenv()
 mcp = FastMCP(
     "postgres_mcp",
 )
+
+VIEW_URI = "ui://maps_mcp/dashboard.html"
+VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text(encoding="utf-8")
+
+@mcp.resource(
+    VIEW_URI,
+    app=AppConfig(csp=ResourceCSP(resource_domains=["https://cdn.plot.ly"],
+)))
+def dashboard_view():
+    return VIEW_HTML
 
 def get_connection():
     conn = None
@@ -49,7 +70,6 @@ def _apply_row_limit(query: str, max_rows: int = 1000) -> str:
         return query
     return f"{query} LIMIT {max_rows}"
 
-
 @mcp.tool()
 def execute_query(query: str, params: dict):
     """
@@ -65,9 +85,9 @@ def execute_query(query: str, params: dict):
         with get_connection() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
                 data = cur.execute(safe_query,params).fetchall()
-            
+                print(f"type of query output:{type(data)}")
 
-        return {"data": data}
+        return data
                                 
     except psycopg.Error as e:
         logging.error(f"Database query execution failed: {e}")
@@ -164,5 +184,189 @@ def get_database_summary():
         raise RuntimeError(f"Database query failed: {e}") from e
 
 
+    """Generate a choropleth map for production data."""
+    if not production_data:
+        return None
+    geojson = Maps_MCP_get_location_polygon_geojson(location="West Africa")
+    return Maps_MCP_render_choropleth_map(
+        layers=[
+            {
+                "feature": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Polygon", "coordinates": [...]},
+                        "properties": {"name": row["country_name"], "value_quantity": row["production_tonnes"]}
+                    }
+                    for row in production_data
+                ],
+                "value_field": "value_quantity"
+            }
+        ],
+        center=[7.95, -1.03],
+        zoom=5
+    )
+
+
+def _fetch_prices(commodity):
+    """Fetch price data for the given commodity."""
+    query = "SELECT * FROM prices WHERE commodity = %s;"
+    return execute_query(query, (commodity,))
+
+def _fetch_production(commodity):
+    """Fetch production data for the given commodity."""
+    query = "SELECT * FROM production WHERE commodity = %s;"
+    return execute_query(query, (commodity,))
+
+def _fetch_rainfall():
+    """Fetch rainfall data (commodity-agnostic)."""
+    query = "SELECT * FROM rainfall;"
+    return execute_query(query, ())
+
+def _build_line_chart(data: list[dict], x_field: str, y_field: str, series_field: str | None = None, title: str = ""):
+    """
+    Price/time series. Pass series_field (e.g. 'commodity') to overlay
+    multiple series on one chart — e.g. Corn vs Wheat over the same range.
+
+    Expected data shape: [{"ts": "...", "price": ..., "commodity": "Corn"}, ...]
+    """
+    df = pd.DataFrame(data)
+    missing = {x_field, y_field} - set(df.columns)
+
+    if missing: 
+        raise ValueError(f"Missing expected field(S) in data: {missing} ")
+
+    fig = px.line(df, x=x_field, y=y_field, color=series_field, title=title)
+    return json.loads(fig.to_json())
+
+def _compute_summary_stats(series: List[float]):
+    """
+    Compute basic summary statistics for a numeric series.
+
+    Use this when:
+    - You want a quick overview of a price or production series.
+    - You need mean, median, std, min, max.
+
+    Args:
+        series: List of numeric values.
+
+    Returns:
+        {
+          "count": int,
+          "mean": float | None,
+          "median": float | None,
+          "std": float | None,
+          "min": float | None,
+          "max": float | None
+        }
+    """
+
+    clean = [x for x in series if x is not None and not math.isnan(x)]
+
+    count = len(clean)
+    mean = statistics.fmean(clean)
+    median = statistics.median(clean)
+    std = statistics.pstdev(clean) if count > 1 else 0.0
+    
+    return {
+        "count": count,
+        "mean": mean,
+        "median": median,
+        "std": std,
+        "min": min(clean),
+        "max": max(clean),
+    }
+
+@mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
+def show_dashboard(commodity: str):
+    """
+    Fetches and processes data for a given commodity.
+    Returns a structured DashboardState object.
+    """
+
+    price_data = _fetch_prices(commodity)
+    if not price_data:
+        return f"No Price Data for this {commodity}"
+
+    processed_price_data = [
+        {**row, 'price': float(row['price'])} for row in price_data
+    ]
+    
+    price_chart = _build_line_chart(
+        data=processed_price_data,
+        x_field="ts",
+        y_field="price",
+        title=f"{commodity} Prices"
+    )
+
+    price_series = [row["price"] for row in processed_price_data]
+
+    metrics = _compute_summary_stats(price_series)
+
+
+    production_data = _fetch_production(commodity)
+    if not production_data:
+        return f"No Production Data for this {commodity}"
+
+    processed_production_data = [
+        {**row, 'production_tonnes': float(row['production_tonnes'])} for row in production_data
+    ]
+
+    production_chart = _build_line_chart(
+        data=processed_production_data,
+        x_field="year",
+        y_field="production_tonnes",
+        series_field="country_name",
+        title=f"{commodity} Production Quantity"
+    )
+
+    charts = {
+        "price_chart": price_chart,
+        "production_chart": production_chart
+    }
+
+    structured ={
+        "commodity":commodity,
+        "metrics": metrics,
+        "charts": charts
+    }
+    
+    content = f"Rendered report on {commodity} to the canvas."
+ 
+    return ToolResult(
+        content=content,
+        structured_content=structured,
+        meta={"ui": {"resourceUri": VIEW_URI}, "ui/resourceUri": VIEW_URI}
+    )  
+
+middleware = [
+    Middleware(
+        CORSMiddleware,
+        allow_origins=["*"], 
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=[
+            "mcp-protocol-version",
+            "mcp-session-id",
+            "Authorization",
+            "Content-Type",
+        ],
+        expose_headers=["mcp-session-id"],
+    )
+]
+app = mcp.http_app(
+    middleware=middleware
+    )
+
 if __name__ == "__main__":
-    mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+    # print("price data:")
+    # price_data= _fetch_prices("cocoa")
+    # processed_price_data = [
+    #     {**row, 'price': float(row['price'])} for row in price_data
+    # ]
+    
+    # price_series = [row["price"] for row in processed_price_data]
+
+    # metrics = _compute_summary_stats(price_series)
+
+    # print(metrics)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

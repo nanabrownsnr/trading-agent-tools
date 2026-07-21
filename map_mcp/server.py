@@ -37,7 +37,9 @@ class Choropleth(BaseModel):
     feature: list[Feature]
     value_field: str
 
-mcp = FastMCP("map_mcp")
+mcp = FastMCP(
+    "map_mcp"
+    )
 
 VIEW_URI = "ui://maps_mcp/map.html"
 VIEW_HTML = (Path(__file__).parent / "views" / "dist" / "index.html").read_text(encoding="utf-8")
