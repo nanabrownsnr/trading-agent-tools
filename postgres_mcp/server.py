@@ -336,7 +336,8 @@ def show_dashboard(commodity: str):
     charts = {
         "price_chart": price_chart,
     }
-    if production_chart:
+    
+    if production_data:
         charts["production_chart"] = production_chart
 
     structured ={
