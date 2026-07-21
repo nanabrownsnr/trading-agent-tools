@@ -284,6 +284,8 @@ def show_dashboard(commodity: str):
     """
     Fetches and processes data for a given commodity.
     Returns a structured DashboardState object.
+
+    If user says update the dashbaord, just re call this tool with the same data.
     """
 
     price_data = _fetch_prices(commodity)
@@ -322,18 +324,20 @@ def show_dashboard(commodity: str):
 
     metrics = _compute_summary_stats(price_series)
 
-    production_chart = _build_line_chart(
+    if production_data:
+        production_chart = _build_line_chart(
         data=processed_production_data,
         x_field="year",
         y_field="production_tonnes",
         series_field="country_name",
         title=f"{commodity} Production Quantity"
-    )
+        )
 
     charts = {
         "price_chart": price_chart,
-        "production_chart": production_chart
     }
+    if production_chart:
+        charts["production_chart"] = production_chart
 
     structured ={
         "commodity":commodity.title(),
