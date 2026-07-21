@@ -238,7 +238,7 @@ def _build_line_chart(data: list[dict], x_field: str, y_field: str, series_field
     fig = px.line(df, x=x_field, y=y_field, color=series_field, title=title)
     return json.loads(fig.to_json())
 
-def _compute_summary_stats(series: List[float]):
+def _compute_summary_stats(series: list[float]):
     """
     Compute basic summary statistics for a numeric series.
 
