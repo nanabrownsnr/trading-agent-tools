@@ -299,8 +299,8 @@ def show_dashboard(commodity: str):
         {**row, 'production_tonnes': float(row['production_tonnes'])} for row in production_data
     ]
 
-    currency = price_rows[0].get("currency") if price_rows else None
-    unit = price_rows[0].get("unit") if price_rows else None
+    currency = price_data[0].get("currency") if price_data else None
+    unit = price_data[0].get("unit") if price_data else None
 
 
     if currency and unit:
