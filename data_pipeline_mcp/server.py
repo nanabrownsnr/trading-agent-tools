@@ -87,7 +87,7 @@ def _airbyte_post(path: str, json_body: dict | None = None):
     resp = requests.post(
         url,
         headers=headers,
-        json=json_body
+        json=json_body,
         timeout=30
     )
 
@@ -98,7 +98,7 @@ def _airbyte_post(path: str, json_body: dict | None = None):
         resp = requests.post(
             url,
             headers=headers,
-            json=json_body
+            json=json_body,
             timeout=30
         )
 
