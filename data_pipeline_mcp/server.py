@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 import jwt
+from fastmcp import FastMCP
+
+mcp = FastMCP("Data Pipeline MCP")
 
 load_dotenv()
 
@@ -236,6 +239,10 @@ middleware = [
         expose_headers=["mcp-session-id"],
     )
 ]
+
+app = mcp.http_app(
+    middleware=middleware
+    )
 
 if __name__ == "__main__":
     import uvicorn
