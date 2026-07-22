@@ -16,6 +16,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import statistics
 import math
+from decimal import Decimal
+
 
 
 logging.basicConfig(
@@ -283,8 +285,10 @@ def _safe_float(x):
 
     if x is None:
         return None
-    if isinstance(x, (int, float)):
+
+    if isinstance(x, (int, float, Decimal)):
         return float(x)
+
     if isinstance(x, str):
         s = x.strip()
         if not s:
