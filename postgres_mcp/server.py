@@ -307,7 +307,7 @@ def show_dashboard(commodity: str):
     price_data = _fetch_prices(commodity)
     production_data = _fetch_production(commodity)
     
-    if not price_data
+    if not price_data:
         return f"No Price data for this {commodity}"
 
     processed_price_data = []
