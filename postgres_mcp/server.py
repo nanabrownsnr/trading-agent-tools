@@ -86,7 +86,6 @@ def execute_query(query: str, params: dict):
         with get_connection() as conn:
             with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
                 data = cur.execute(safe_query,params).fetchall()
-                print(f"type of query output:{type(data)}")
 
         return data
                                 
@@ -211,6 +210,7 @@ def get_database_summary():
 def _fetch_prices(commodity):
     """Fetch price data for the given commodity."""
     query = f"SELECT * FROM {commodity.lower()}_prices;"
+    logging.info(query)
     return execute_query(query, ())
 
 def _fetch_production(commodity):
@@ -305,6 +305,7 @@ def show_dashboard(commodity: str):
     """
 
     price_data = _fetch_prices(commodity)
+    logging.info(f"Price_Data: {price_data}")
     production_data = _fetch_production(commodity)
     
     if not price_data:
@@ -316,6 +317,8 @@ def show_dashboard(commodity: str):
         if price_val is None:
             continue
         processed_price_data.append({**row, "price":price_val})
+    
+    logging.info(f"Processed_price_data: {processed_price_data}")
     
     currency = price_data[0].get("currency") if price_data else None
     unit = price_data[0].get("unit") if price_data else None
