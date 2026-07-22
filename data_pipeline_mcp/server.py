@@ -153,6 +153,58 @@ def _airbyte_patch(path: str, json_body: dict):
 
     return resp.json()
 
+def _wait_for_job(job_id: int) -> dict:
+    """
+    Wait until an Airbyte job completes.
+
+    Args:
+        job_id:
+            Airbyte Job ID.
+
+        timeout:
+            Maximum number of seconds to wait.
+
+        poll_interval:
+            Seconds between polling attempts.
+
+    Returns:
+        Final Airbyte job object.
+
+    Raises:
+        TimeoutError:
+            Job did not finish before timeout.
+    """
+
+    start = time.time()
+
+    while True:
+
+        job = _airbyte_get(f"jobs/{job_id}")
+
+        status = job["status"].lower()
+
+        if status in (
+            "succeeded",
+            "completed",
+        ):
+            return job
+
+        if status in (
+            "failed",
+            "cancelled",
+            "incomplete",
+        ):
+            raise RuntimeError(
+                f"Job {job_id} finished with status '{status}'."
+            )
+
+        if time.time() - start > 600:
+            raise TimeoutError(
+                f"Timed out waiting for job {job_id}."
+            )
+
+        time.sleep(10)
+
 
 @mcp.tool()
 def list_sources():
@@ -185,15 +237,46 @@ def get_destination_details(destination_id: str):
     return _airbyte_get(f"destinations/{destination_id}")
 
 @mcp.tool()
-def run_connection_sync(connection_id: str):
+def run_connection_sync(connection_id: str, wait: bool=True):
+    """
+    Starts a synchronization for an Airbyte Connection.
 
-    return _airbyte_post(
+    Optionally waits until the synchronization has completed before
+    returning.
+
+    Args:
+        connection_id:
+            Airbyte Connection ID.
+
+        wait:
+            If True, blocks until the sync finishes.
+
+    Returns:
+        Job summary.
+    """
+
+    job = _airbyte_post(
         "jobs",
         {
             "connectionId": connection_id,
-            "jobType": "sync"
-        }
+            "jobType": "sync",
+        },
     )
+
+    if not wait:
+        return job
+
+    job_id = job["jobId"]
+
+    completed_job = _wait_for_job(job_id)
+
+    return {
+        "status": completed_job["status"],
+        "job_id": job_id,
+        "started_at": completed_job.get("startedAt"),
+        "ended_at": completed_job.get("endedAt"),
+        "attempts": completed_job.get("attempts"),
+    }
 
 @mcp.tool()
 def get_job_status(connection_id: str):
