@@ -279,6 +279,22 @@ def _compute_summary_stats(series: list[float]):
         "max": max(clean),
     }
 
+def _safe_float(x):
+
+    if x is None:
+        return None
+    if isinstance(x, (int, float)):
+        return float(x)
+    if isinstance(x, str):
+        s = x.strip()
+        if not s:
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    return None
+
 @mcp.tool(app=AppConfig(resource_uri=VIEW_URI))
 def show_dashboard(commodity: str):
     """
@@ -291,19 +307,18 @@ def show_dashboard(commodity: str):
     price_data = _fetch_prices(commodity)
     production_data = _fetch_production(commodity)
     
-    if not price_data and not production_data:
-        return f"No Data for this {commodity}"
-        
-    processed_price_data = [
-        {**row, 'price': float(row['price'])} for row in price_data
-    ]
-    processed_production_data = [
-        {**row, 'production_tonnes': float(row['production_tonnes'])} for row in production_data
-    ]
+    if not price_data
+        return f"No Price data for this {commodity}"
 
+    processed_price_data = []
+    for row in price_data:
+        price_val = _safe_float(row.get("price"))
+        if price_val is None:
+            continue
+        processed_price_data.append({**row, "price":price_val})
+    
     currency = price_data[0].get("currency") if price_data else None
     unit = price_data[0].get("unit") if price_data else None
-
 
     if currency and unit:
         y_title = f"Price ({currency}/{unit})"
@@ -322,9 +337,23 @@ def show_dashboard(commodity: str):
 
     price_series = [row["price"] for row in processed_price_data]
 
-    metrics = _compute_summary_stats(price_series)
+    metrics = _compute_summary_stats(price_series)    
+
+    charts = {
+        "price_chart": price_chart,
+    }
+
 
     if production_data:
+        processed_production_data = []
+        for row in production_data:
+            production_val = _safe_float(row.get("production_tonnes"))
+            if production_val is None:
+                continue
+            processed_production_data.append({**row, "production_tonnes":production_val})
+
+
+
         production_chart = _build_line_chart(
         data=processed_production_data,
         x_field="year",
@@ -333,12 +362,8 @@ def show_dashboard(commodity: str):
         title=f"{commodity} Production Quantity"
         )
 
-    charts = {
-        "price_chart": price_chart,
-    }
-
-    if production_data:
         charts["production_chart"] = production_chart
+
 
     structured ={
         "commodity":commodity.title(),
