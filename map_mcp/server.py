@@ -395,6 +395,8 @@ def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: 
     Render a choropleth map layer from polygon features with numeric values.
 
     Use this when:
+    - User asky you to vizualize one or more ares on the map using specific data and use
+      different intensities of one colour to show the difference between the data (highest intensity= highest number, lowest intensity= lowest number)
     - You have one or more polygon Features (e.g. regions, countries, districts)
       and a numeric field you want to visualize as a color scale.
     - You want to show regional differences (e.g. production, risk, demand)
@@ -431,7 +433,7 @@ def render_choropleth_map(layers: list[Choropleth], center: list[float] , zoom: 
                   "center": [lat, lon],
                   "zoom": zoom,
                   "layers": [ { type: "choropleth", ... } ]
-              }
+              } # 2what is rendered on the canvas
             - meta: UI resource URI for the map.
     """
     processed_layers = []
