@@ -245,9 +245,6 @@ def resume_connection(connection_id: str):
     )
 
 
-
-def
-
 middleware = [
     Middleware(
         CORSMiddleware,
