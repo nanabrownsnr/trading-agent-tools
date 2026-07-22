@@ -157,17 +157,32 @@ def _airbyte_patch(path: str, json_body: dict):
 @mcp.tool()
 def list_sources():
 
-    return _airbyte_get(f"sources")
+    return _airbyte_get("sources")
 
 @mcp.tool()
 def list_connections():
 
-    return _airbyte_get(f"connections")
+    return _airbyte_get("connections")
+
+@mcp.tool
+def list_destinations():
+
+    return _airbyte_get("destinations")
 
 @mcp.tool()
-def get_connection(connection_id: str):
+def get_source_details(source_id: str):
+
+    return _airbyte_get(f"sources/{source_id}")
+
+@mcp.tool()
+def get_connection_details(connection_id: str):
 
     return _airbyte_get(f"connections/{connection_id}")
+
+@mcp.tool()
+def get_destination_details(destination_id: str):
+    
+    return _airbyte_get(f"destinations/{destination_id}")
 
 @mcp.tool()
 def run_connection_sync(connection_id: str):
@@ -229,6 +244,9 @@ def resume_connection(connection_id: str):
         }
     )
 
+
+
+def
 
 middleware = [
     Middleware(
