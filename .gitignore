@@ -1,3 +1,5 @@
 graph_mcp/views/node_modules/
 map_mcp/views/node_modules/
 postgres_mcp/views/node_modules/
+postgres_mcp/.env
+data_pipeline_mcp/.env
